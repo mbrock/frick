@@ -1,0 +1,13 @@
+# Secrets (never commit)
+.env
+secret/
+
+# Local dev environment
+.envrc
+.venv/
+
+# Build artifacts
+/frick
+
+# OS
+.DS_Store
