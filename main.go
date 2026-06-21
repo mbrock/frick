@@ -1,6 +1,6 @@
 // frick: Bank Frick Web API CLI (kong-powered).
 //
-// Reads FRICK_API_KEY from env, loads the RSA private key specified by
+// Reads FRICK_API_KEY from env or a local config file, loads the RSA private key specified by
 // --key-file / $FRICK_KEY_FILE, obtains a JWT via POST /v2/authorize, caches
 // it under $XDG_CACHE_HOME/frickgo/jwt.json, and signs every write with
 // RSA-SHA512. See docs/frick-api.md.
@@ -25,7 +25,7 @@ const (
 // Globals are the flags shared across every subcommand.
 type Globals struct {
 	Sandbox bool   `help:"Use the sandbox environment."`
-	KeyFile string `name:"key-file" env:"FRICK_KEY_FILE" type:"existingfile" help:"RSA private key used to sign requests (required for authenticated commands)."`
+	KeyFile string `name:"key-file" env:"FRICK_KEY_FILE" help:"RSA private key used to sign requests (required for authenticated commands)."`
 	Cache   string `default:"${cacheDefault}" help:"JWT cache path (empty string to disable)."`
 	NoCache bool   `name:"no-cache" help:"Ignore and overwrite any cached JWT."`
 	AuthTTL string `name:"auth-ttl" default:"1h" help:"Requested JWT lifetime."`
@@ -114,9 +114,17 @@ func main() {
 	if len(os.Args) < 2 {
 		os.Args = append(os.Args, "--help")
 	}
+	if _, err := loadDefaultEnv(); err != nil {
+		fmt.Fprintf(os.Stderr, "frick: load config: %v\n", err)
+		os.Exit(2)
+	}
+	if err := normalizeCredentialEnv(); err != nil {
+		fmt.Fprintf(os.Stderr, "frick: normalize config: %v\n", err)
+		os.Exit(2)
+	}
 	kctx := kong.Parse(&cli,
 		kong.Name("frick"),
-		kong.Description("Bank Frick Web API CLI. Reads FRICK_API_KEY from env and signs with an RSA key."),
+		kong.Description("Bank Frick Web API CLI. Reads FRICK_API_KEY from env or ~/.config/frick/.env and signs with an RSA key."),
 		kong.Vars{"cacheDefault": DefaultJWTCachePath()},
 		kong.UsageOnError(),
 	)
