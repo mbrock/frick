@@ -259,7 +259,7 @@ func (cmd *PendingCmd) Run(ctx *Context) error {
 }
 
 type CreateCmd struct {
-	From            string  `required:"" help:"Debitor IBAN (your account)."`
+	From            string  `required:"" env:"FRICK_FROM_IBAN" help:"Debitor IBAN (your account; defaults to $FRICK_FROM_IBAN)."`
 	ToIBAN          string  `name:"to-iban" required:"" help:"Creditor IBAN."`
 	ToName          string  `name:"to-name" required:"" help:"Creditor name."`
 	ToAddress       string  `name:"to-address" help:"Creditor street address."`

@@ -87,8 +87,12 @@ func printTx(t Transaction) {
 	if len(ref) > 50 {
 		ref = ref[:50] + "…"
 	}
-	fmt.Printf("%-10s %14s %s  %-30s  %s\n",
-		date, formatAmount(t.Amount), t.Currency,
+	state := t.State
+	if state == "" {
+		state = "-"
+	}
+	fmt.Printf("%-10s %-9s %14s %s  %-30s  %s\n",
+		date, state, formatAmount(t.Amount), t.Currency,
 		truncRunes(counterparty, 30), ref)
 }
 
