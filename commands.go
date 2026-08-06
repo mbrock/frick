@@ -260,7 +260,7 @@ func (cmd *PendingCmd) Run(ctx *Context) error {
 
 type CreateCmd struct {
 	From            string  `required:"" env:"FRICK_FROM_IBAN" help:"Debitor IBAN (your account; defaults to $FRICK_FROM_IBAN)."`
-	ToIBAN          string  `name:"to-iban" required:"" help:"Creditor IBAN."`
+	ToIBAN          string  `name:"to-iban" required:"" help:"Creditor IBAN, or an exact recipient name to resolve from booked history."`
 	ToName          string  `name:"to-name" required:"" help:"Creditor name."`
 	ToAddress       string  `name:"to-address" help:"Creditor street address."`
 	ToPostalcode    string  `name:"to-postalcode" help:"Creditor postal code."`
@@ -290,16 +290,20 @@ func (cmd *CreateCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	if cmd.CustomID == "" {
-		cmd.CustomID = "frickgo-" + uuid.NewString()
-	}
 	if cmd.Type == "SEPA_INSTANT" && cmd.Currency != "EUR" {
 		return fmt.Errorf("SEPA_INSTANT only supports EUR")
+	}
+	toIBAN, err := resolveToIBAN(ctx, c, cmd.ToIBAN)
+	if err != nil {
+		return err
+	}
+	if cmd.CustomID == "" {
+		cmd.CustomID = "frickgo-" + uuid.NewString()
 	}
 
 	creditor := TxParty{
 		Name:       cmd.ToName,
-		IBAN:       cmd.ToIBAN,
+		IBAN:       toIBAN,
 		Address:    cmd.ToAddress,
 		Postalcode: cmd.ToPostalcode,
 		City:       cmd.ToCity,
@@ -375,6 +379,108 @@ func (cmd *CreateCmd) Run(ctx *Context) error {
 				formatAmount(t.Amount), t.Currency, t.Creditor.Name)
 		}
 	})
+}
+
+// resolveToIBAN leaves an IBAN alone (apart from normalizing spaces and case).
+// Otherwise, value is treated as a creditor name and resolved from booked
+// history across the user's accounts.
+func resolveToIBAN(ctx context.Context, c *Client, value string) (string, error) {
+	if iban, ok := normalizeIBAN(value); ok {
+		return iban, nil
+	}
+
+	accounts, err := c.Accounts(ctx)
+	if err != nil {
+		return "", fmt.Errorf("resolve recipient %q: list accounts: %w", value, err)
+	}
+	type recipientMatch struct {
+		iban string
+		tx   Transaction
+	}
+	var newest *recipientMatch
+	for _, account := range accounts.Accounts {
+		filters := map[string]string{
+			"fromDate":   "2000-01-01",
+			"maxResults": "2500",
+			"order":      "desc",
+			"searchName": value,
+			"status":     "BOOKED",
+		}
+		offset := 0
+		foundInAccount := false
+		for !foundInAccount {
+			filters["firstPosition"] = strconv.Itoa(offset)
+			resp, err := c.Transactions(ctx, account.CustomerID(), account.AccountPath(), filters)
+			if err != nil {
+				return "", fmt.Errorf("resolve recipient %q from transaction history for %s: %w", value, account.IBAN, err)
+			}
+			for _, tx := range resp.Transactions {
+				if !sameRecipientName(tx.Creditor.Name, value) {
+					continue
+				}
+				if iban, ok := normalizeIBAN(tx.Creditor.IBAN); ok {
+					candidate := &recipientMatch{iban: iban, tx: tx}
+					if newest == nil || txDate(candidate.tx) > txDate(newest.tx) ||
+						(txDate(candidate.tx) == txDate(newest.tx) && candidate.tx.OrderID > newest.tx.OrderID) {
+						newest = candidate
+					}
+					foundInAccount = true
+					break
+				}
+			}
+			if foundInAccount || !resp.MoreResults || len(resp.Transactions) == 0 {
+				break
+			}
+			offset += len(resp.Transactions)
+		}
+	}
+	if newest == nil {
+		return "", fmt.Errorf("no booked transfer to %q with an IBAN found", value)
+	}
+	fmt.Fprintf(os.Stderr, "resolved %q to %s from transfer dated %s\n",
+		value, formatIBAN(newest.iban), txDate(newest.tx))
+	return newest.iban, nil
+}
+
+func sameRecipientName(a, b string) bool {
+	return strings.EqualFold(strings.Join(strings.Fields(a), " "), strings.Join(strings.Fields(b), " "))
+}
+
+func compactIBAN(value string) string {
+	return strings.ToUpper(strings.Join(strings.Fields(value), ""))
+}
+
+// normalizeIBAN applies the generic IBAN shape and checksum rules. This keeps
+// an ordinary name from accidentally being sent as a creditor account number.
+func normalizeIBAN(value string) (string, bool) {
+	iban := compactIBAN(value)
+	if len(iban) < 15 || len(iban) > 34 {
+		return "", false
+	}
+	if iban[0] < 'A' || iban[0] > 'Z' || iban[1] < 'A' || iban[1] > 'Z' ||
+		iban[2] < '0' || iban[2] > '9' || iban[3] < '0' || iban[3] > '9' {
+		return "", false
+	}
+	for i := 4; i < len(iban); i++ {
+		if (iban[i] < '0' || iban[i] > '9') && (iban[i] < 'A' || iban[i] > 'Z') {
+			return "", false
+		}
+	}
+
+	remainder := 0
+	for i := 0; i < len(iban); i++ {
+		ch := iban[(i+4)%len(iban)]
+		if ch >= '0' && ch <= '9' {
+			remainder = (remainder*10 + int(ch-'0')) % 97
+		} else {
+			value := int(ch-'A') + 10
+			remainder = (remainder*100 + value) % 97
+		}
+	}
+	if remainder != 1 {
+		return "", false
+	}
+	return iban, true
 }
 
 type DeleteCmd struct {
