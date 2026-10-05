@@ -95,9 +95,22 @@ async function authorize(client: string, scope: string) {
     }
     response = await request(location, { headers: basic });
     if (response.status === 200) {
+      assert.equal(response.headers.get("referrer-policy"), "same-origin");
       const html = await response.text();
       const csrf = html.match(/name="csrf" value="([^"]+)"/)?.[1];
       assert.ok(csrf, html);
+      for (const invalidOrigin of ["null", "https://attacker.example"]) {
+        const rejected = await request(location, {
+          method: "POST",
+          headers: {
+            ...basic,
+            Origin: invalidOrigin,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({ csrf, decision: "allow" }),
+        });
+        assert.equal(rejected.status, 403);
+      }
       response = await request(location, {
         method: "POST",
         headers: {

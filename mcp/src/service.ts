@@ -126,7 +126,9 @@ export function createService(
   app.use((req, res, next) => {
     res.set({
       "Cache-Control": "no-store",
-      "Referrer-Policy": "no-referrer",
+      // no-referrer also changes a browser form POST Origin to null.
+      // Keep same-origin consent posts verifiable without leaking URLs to clients.
+      "Referrer-Policy": "same-origin",
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy":
         "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
