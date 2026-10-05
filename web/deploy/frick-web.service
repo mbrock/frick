@@ -1,0 +1,19 @@
+[Unit]
+Description=Private Frick HTML service
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/tmp
+EnvironmentFile=%h/.config/frick-relay/frontend.env
+ExecStart=/usr/local/bin/bun run %h/frick-web/src/native.ts
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=default.target

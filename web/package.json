@@ -1,0 +1,22 @@
+{
+  "name": "frick-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/native.ts",
+    "types": "wrangler types --strict-vars=false",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "latest",
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.0",
+    "wrangler": "4.147.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20261001.1": true
+  }
+}

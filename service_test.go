@@ -106,3 +106,40 @@ func testRSAKey(t *testing.T) *rsa.PrivateKey {
 	}
 	return key
 }
+
+func TestRelayHistoryFiltersAndBounds(t *testing.T) {
+	reads := 0
+	bank := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/v2/accounts" {
+			json.NewEncoder(w).Encode(AccountsResp{Accounts: []Account{{IBAN: "DE89370400440532013000", Currency: "EUR", Customer: "100 Example", Account: "100/001"}}})
+			return
+		}
+		reads++
+		q := r.URL.Query()
+		if q.Get("maxResults") != "15" || q.Get("firstPosition") != "15" || q.Get("status") != "BOOKED" || q.Get("fromDate") != "2000-01-01" || q.Get("order") != "desc" {
+			t.Errorf("incorrect bank history filters: %v", q)
+		}
+		json.NewEncoder(w).Encode(TransactionsResp{})
+	}))
+	defer bank.Close()
+	h := relayHandler(func(context.Context) (*Client, error) { return &Client{BaseURL: bank.URL, JWT: "mock"}, nil }, "test-relay-token")
+	for _, tc := range []struct {
+		query  string
+		status int
+	}{
+		{"offset=15&limit=15&status=BOOKED", 200},
+		{"limit=101", 400}, {"limit=0", 400}, {"offset=-1", 400}, {"status=BOGUS", 400},
+	} {
+		r := httptest.NewRequest("GET", "/transactions?account=DE89370400440532013000&"+tc.query, nil)
+		r.Header.Set("Authorization", "Bearer test-relay-token")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != tc.status {
+			t.Fatalf("%s: %d, expected %d", tc.query, w.Code, tc.status)
+		}
+	}
+	if reads != 1 {
+		t.Fatalf("unexpected transaction reads: %d", reads)
+	}
+}

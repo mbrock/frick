@@ -175,9 +175,18 @@ func relayHandler(factory func(context.Context) (*Client, error), secret string)
 				reject(400, "Invalid page offset")
 				return
 			}
-			filters := map[string]string{"maxResults": "100", "firstPosition": strconv.Itoa(n), "order": "desc"}
+			limit := r.URL.Query().Get("limit")
+			if limit == "" {
+				limit = "100"
+			}
+			count, e := strconv.Atoi(limit)
+			if e != nil || count < 1 || count > 100 {
+				reject(400, "Invalid page size")
+				return
+			}
+			filters := map[string]string{"maxResults": strconv.Itoa(count), "firstPosition": strconv.Itoa(n), "order": "desc", "fromDate": "2000-01-01"}
 			if status := r.URL.Query().Get("status"); status != "" {
-				if status != "PREPARED" {
+				if status != "PREPARED" && status != "BOOKED" && status != "IN_PROGRESS" && status != "REJECTED" && status != "EXPIRED" && status != "DELETED" && status != "DELETION_REQUESTED" && status != "ERROR" {
 					reject(400, "Invalid status filter")
 					return
 				}
