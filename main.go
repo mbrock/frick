@@ -36,6 +36,8 @@ type Globals struct {
 type CLI struct {
 	Globals
 
+	Serve ServeCmd `cmd:"" help:"Run restricted tailnet JSON service."`
+
 	Info       InfoCmd       `cmd:"" help:"GET /v2/info (no auth)."`
 	Auth       AuthCmd       `cmd:"" help:"Warm or refresh the JWT cache."`
 	Logout     LogoutCmd     `cmd:"" help:"Clear the JWT cache."`

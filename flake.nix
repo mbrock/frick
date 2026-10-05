@@ -25,7 +25,7 @@
             pname = "frick";
             version = "0.1.0";
             src = self;
-            vendorHash = "sha256-WUgaW0kXX/TFbXMqp+hI8hpHPKTdelg8w5kjsviEKSw=";
+            vendorHash = "sha256-y4hsPgHs31ZPRoaGGh12MoVJLO1rISfCCGPe/BO9juE=";
           };
         });
 

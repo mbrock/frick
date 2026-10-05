@@ -1,0 +1,20 @@
+[Unit]
+Description=Frick restricted banking relay on the tailnet
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=FRICK_ENV_FILE=%h/.config/frick-relay/.env
+EnvironmentFile=-%h/.config/frick-relay/bootstrap.env
+ExecStart=%h/.local/bin/frick-relay --cache=%h/.local/state/frick-relay/jwt.json --auth-ttl=15m serve --state-dir=%h/.local/state/frick-relay/tsnet
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/frick-relay
+
+[Install]
+WantedBy=default.target

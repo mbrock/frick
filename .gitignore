@@ -11,3 +11,5 @@ secret/
 
 # OS
 .DS_Store
+
+/vendor/
