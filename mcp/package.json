@@ -1,0 +1,24 @@
+{
+  "name": "frick-mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "build": "esbuild src/native.ts --bundle --platform=node --packages=external --format=esm --outfile=dist/server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.3.0",
+    "express": "^5.1.0",
+    "oidc-provider": "9.12.2",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "@types/oidc-provider": "^9.0.0",
+    "esbuild": "^0.28.0",
+    "tsx": "^4.20.0",
+    "typescript": "^7.0.2"
+  }
+}

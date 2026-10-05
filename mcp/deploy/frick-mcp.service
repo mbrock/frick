@@ -1,0 +1,23 @@
+[Unit]
+Description=Frick OAuth and remote MCP
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/tmp
+EnvironmentFile=%h/.config/frick-relay/frontend.env
+Environment=PUBLIC_ORIGIN=https://less.rest
+Environment=FRICK_OAUTH_STATE=%h/.local/state/frick-mcp
+Environment=PORT=8788
+ExecStart=%h/.local/lib/node-frick/bin/node %h/src/frick/mcp/dist/server.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/frick-mcp
+
+[Install]
+WantedBy=default.target

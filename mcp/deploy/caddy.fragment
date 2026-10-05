@@ -1,0 +1,5 @@
+# Insert before the existing @frick handler in the less.rest site block.
+@frickMcp path /frick/mcp /frick/oauth /frick/oauth/* /.well-known/oauth-protected-resource/frick/mcp /.well-known/oauth-authorization-server/frick/oauth
+handle @frickMcp {
+    reverse_proxy 127.0.0.1:8788
+}
