@@ -329,6 +329,7 @@ export function createService(
   );
   app.get("/.well-known/oauth-authorization-server/frick/oauth", (req, res) => {
     req.url = "/.well-known/openid-configuration";
+    req.originalUrl = "/frick/oauth" + req.url;
     provider.callback()(req, res);
   });
   app.all(

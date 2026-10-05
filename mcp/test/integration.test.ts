@@ -190,6 +190,9 @@ test("OAuth PKCE, persistent state, scopes, stateless modern/legacy MCP, refresh
     );
     const metadata = await response.json();
     assert.equal(metadata.issuer, issuer);
+    assert.equal(metadata.authorization_endpoint, issuer + "/auth");
+    assert.equal(metadata.token_endpoint, issuer + "/token");
+    assert.equal(metadata.registration_endpoint, issuer + "/reg");
     assert.ok(metadata.code_challenge_methods_supported.includes("S256"));
     response = await request(resource, { method: "POST" });
     assert.equal(response.status, 401);
